@@ -7,7 +7,7 @@ load_dotenv()
 
 app = Flask(__name__)
 
-API_KEY = os.getenv("API_KEY")
+API_KEY = os.getenv("TICKETMASTER_API_KEY")
 
 @app.route("/")
 def index():
