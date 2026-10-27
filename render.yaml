@@ -1,0 +1,21 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# Deploys the Express API in backend/. The frontend is deployed separately on Vercel.
+services:
+  - type: web
+    name: baypulse-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    # --include=dev so TypeScript is installed for the build step.
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Set these in the Render dashboard; they are never stored in the repo.
+      - key: TICKETMASTER_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

@@ -188,10 +188,10 @@ The Ticketmaster key lives only on the backend. Never put it in a `VITE_` variab
 ## Deployment
 
 ### Backend on Render
-1. New **Web Service** with root directory `backend`.
-2. Build command `npm install && npm run build`; start command `npm start`.
-3. Set the `TICKETMASTER_API_KEY` and `FRONTEND_URL` env vars (e.g. `https://baypulse.vercel.app`). Render provides `PORT` itself.
-4. Check `https://<service>.onrender.com/health`.
+The repo includes a [`render.yaml`](render.yaml) Blueprint.
+1. In Render, choose **New → Blueprint** and connect this repository. Render reads `render.yaml` and creates the `baypulse-api` web service (root `backend`, build `npm ci --include=dev && npm run build`, start `npm start`, health check `/health`).
+2. When prompted, enter `TICKETMASTER_API_KEY` and `FRONTEND_URL` (your Vercel URL, e.g. `https://baypulse.vercel.app`; comma-separate several). Render provides `PORT` itself.
+3. Check `https://<service>.onrender.com/health`.
 
 ### Frontend on Vercel
 1. Import the repo with root directory `frontend` (framework preset: Vite).
