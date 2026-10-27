@@ -103,7 +103,6 @@ BayPulse/
 │   ├── vercel.json      # SPA rewrites for client-side routes
 │   ├── .env.example
 │   └── package.json
-├── app.py, fetch_events.py, templates/   # original Flask prototype (kept for reference)
 └── README.md
 ```
 
