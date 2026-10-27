@@ -1,1 +1,16 @@
+# Secrets
 .env
+.env.local
+
+# Dependencies & builds
+node_modules/
+dist/
+
+# Python prototype
+venv/
+__pycache__/
+
+# OS / editor
+.DS_Store
+.vscode/
+.claude/
