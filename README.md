@@ -2,6 +2,10 @@
 
 **Discover events across the San Francisco Bay Area, one city at a time.**
 
+**Live demo: [baypulse.vercel.app](https://baypulse.vercel.app)** · API: [baypulse-api.onrender.com/health](https://baypulse-api.onrender.com/health)
+
+> The API runs on Render's free tier and sleeps when idle. If the first load shows an error, wait 30–60 seconds and press **Try again**.
+
 BayPulse is a full-stack web app for finding local events around the San Francisco Bay Area. You don't need GPS or a distance search: pick a city, browse upcoming events, filter them, and see where they are on an interactive map.
 
 It covers concerts, arts and culture, sports, festivals and other local events, from San Francisco to San Jose.
@@ -103,6 +107,7 @@ BayPulse/
 │   ├── vercel.json      # SPA rewrites for client-side routes
 │   ├── .env.example
 │   └── package.json
+├── render.yaml          # Render Blueprint for the backend
 └── README.md
 ```
 
@@ -187,18 +192,46 @@ The Ticketmaster key lives only on the backend. Never put it in a `VITE_` variab
 
 ## Deployment
 
-### Backend on Render
-The repo includes a [`render.yaml`](render.yaml) Blueprint.
-1. In Render, choose **New → Blueprint** and connect this repository. Render reads `render.yaml` and creates the `baypulse-api` web service (root `backend`, build `npm ci --include=dev && npm run build`, start `npm start`, health check `/health`).
-2. When prompted, enter `TICKETMASTER_API_KEY` and `FRONTEND_URL` (your Vercel URL, e.g. `https://baypulse.vercel.app`; comma-separate several). Render provides `PORT` itself.
-3. Check `https://<service>.onrender.com/health`.
+| Part | Host | URL | Config |
+|---|---|---|---|
+| Frontend | Vercel (Hobby) | https://baypulse.vercel.app | root `frontend`, preset Vite, [`frontend/vercel.json`](frontend/vercel.json) |
+| Backend | Render (Free) | https://baypulse-api.onrender.com | [`render.yaml`](render.yaml) Blueprint |
 
-### Frontend on Vercel
-1. Import the repo with root directory `frontend` (framework preset: Vite).
-2. Set `VITE_API_URL=https://<service>.onrender.com/api`.
-3. Deploy. `vercel.json` rewrites every path to `index.html`, so links like `/city/oakland` work on refresh.
+```text
+Browser ─► baypulse.vercel.app (static React build)
+   │
+   └─ XHR ─► baypulse-api.onrender.com/api (Express) ─► Ticketmaster Discovery API
+              CORS allows only FRONTEND_URL          API key stays on the server
+```
 
-Render's free tier sleeps when idle, so the first request after a while can take 30+ seconds. The frontend allows 30 s before showing a retry message.
+Both services auto-deploy on every push to `master`.
+
+### 1. Backend on Render
+1. In Render, choose **New → Blueprint** and connect this repository. Render reads `render.yaml` and creates the `baypulse-api` web service (root `backend`, build `npm ci --include=dev && npm run build`, start `npm start`, health check `/health`, Node 22).
+2. When prompted, enter:
+   - `TICKETMASTER_API_KEY`: your Ticketmaster Consumer Key.
+   - `FRONTEND_URL`: use `http://localhost:5173` for now. You'll set the real value in step 3.
+
+   Render provides `PORT` itself.
+3. Open `https://<service>.onrender.com/health` and check that it shows `"status":"ok"` and `"ticketmasterConfigured":true`. The root URL `/` returns a JSON 404 on purpose; this is an API, not a web page.
+
+### 2. Frontend on Vercel
+1. **Add New → Project**, then import the repo.
+2. Set **Root Directory** to `frontend`. The preset becomes **Vite**. Don't use the "multi-service" import Vercel suggests: the backend lives on Render.
+3. Add the environment variable `VITE_API_URL=https://<service>.onrender.com/api` (no trailing slash).
+4. Deploy. `vercel.json` rewrites every path to `index.html`, so deep links like `/city/oakland` work on refresh.
+
+### 3. Connect them (CORS)
+In Render, under **baypulse-api → Environment**, set `FRONTEND_URL` to the Vercel URL (e.g. `https://baypulse.vercel.app`) and save. To allow more than one origin, separate them with commas.
+
+### Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| "Couldn't load cities" or "Can't reach the BayPulse server" | `FRONTEND_URL` on Render doesn't match the site's origin exactly, or Render is still deploying the change. |
+| First load is slow or times out | The free Render instance is waking up (30–60 s). Press **Try again**. |
+| Frontend still calls the old API URL | `VITE_*` variables are baked in at build time. **Redeploy** on Vercel after changing them. |
+| Vercel preview URLs can't load data | Previews have their own origins (and Vercel login protection). Add them to `FRONTEND_URL` if needed. |
 
 ## Future enhancements
 
