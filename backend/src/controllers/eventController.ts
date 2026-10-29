@@ -15,7 +15,8 @@ function str(v: unknown): string | undefined {
 function int(v: unknown, fallback: number, name: string, min: number, max: number): number {
   const s = str(v);
   if (s === undefined) return fallback;
-  const n = Number(s);
+  // Plain decimal digits only: Number() would also accept "0x10", "1e1" and "".
+  const n = /^-?\d+$/.test(s) ? Number(s) : NaN;
   if (!Number.isInteger(n) || n < min || n > max) {
     throw new AppError(400, "INVALID_PARAM", `"${name}" must be an integer between ${min} and ${max}`);
   }
@@ -25,7 +26,9 @@ function int(v: unknown, fallback: number, name: string, min: number, max: numbe
 function date(v: unknown, name: string): string | undefined {
   const s = str(v);
   if (s === undefined) return undefined;
-  if (!DATE_RE.test(s) || Number.isNaN(Date.parse(s))) {
+  // Date.parse rolls impossible dates over ("2026-02-30" -> Mar 2), so require a round trip.
+  const parsed = DATE_RE.test(s) ? new Date(`${s}T00:00:00Z`) : null;
+  if (!parsed || Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== s) {
     throw new AppError(400, "INVALID_DATE", `"${name}" must be a date in YYYY-MM-DD format`);
   }
   return s;

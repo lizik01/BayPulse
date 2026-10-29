@@ -17,8 +17,14 @@ export class TtlCache<T> {
     return hit.value;
   }
 
+  clear(): void {
+    this.store.clear();
+  }
+
   set(key: string, value: T): void {
-    if (this.store.size >= this.maxEntries) {
+    // Re-inserting moves the key to the newest position; only evict when adding a new key.
+    if (this.store.has(key)) this.store.delete(key);
+    else if (this.store.size >= this.maxEntries) {
       // Map preserves insertion order, so the first key is the oldest.
       const oldest = this.store.keys().next().value;
       if (oldest !== undefined) this.store.delete(oldest);
