@@ -23,6 +23,12 @@ export interface SearchParams {
 const searchCache = new TtlCache<SearchResult>(5 * 60_000);
 const detailCache = new TtlCache<Event>(10 * 60_000);
 
+/** Test helper: forget cached Ticketmaster responses. */
+export function clearCaches(): void {
+  searchCache.clear();
+  detailCache.clear();
+}
+
 function apiKey(): string {
   const key = process.env.TICKETMASTER_API_KEY;
   if (!key) {
@@ -70,7 +76,7 @@ const toTmUtc = (d: Date) => d.toISOString().replace(/\.\d{3}Z$/, "Z");
  * Converts the start or end of a Bay Area local day (America/Los_Angeles) to a Ticketmaster UTC
  * timestamp, so "Dec 31" means midnight to midnight Pacific rather than UTC.
  */
-function tmDate(date: string, endOfDay: boolean): string {
+export function tmDate(date: string, endOfDay: boolean): string {
   const wallClock = new Date(`${date}T${endOfDay ? "23:59:59" : "00:00:00"}Z`);
   const offsetName = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Los_Angeles",
@@ -132,7 +138,7 @@ export async function getEventById(id: string): Promise<Event> {
   return event;
 }
 
-function pickImage(images: any[] | undefined): string | null {
+export function pickImage(images: any[] | undefined): string | null {
   if (!images?.length) return null;
   // Prefer a wide 16:9 image that's big enough for a card, but not huge.
   const wide = images
@@ -146,7 +152,7 @@ function toNumber(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function normalizeEvent(e: any): Event {
+export function normalizeEvent(e: any): Event {
   const v = e?._embedded?.venues?.[0];
   const cls = e?.classifications?.find((c: any) => c.primary) ?? e?.classifications?.[0];
   const price = e?.priceRanges?.[0];
