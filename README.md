@@ -1,5 +1,7 @@
 # BayPulse — Bay Area Event Finder
 
+[![CI](https://github.com/lizik01/BayPulse/actions/workflows/ci.yml/badge.svg)](https://github.com/lizik01/BayPulse/actions/workflows/ci.yml)
+
 **Discover events across the San Francisco Bay Area, one city at a time.**
 
 **Live demo: [baypulse.vercel.app](https://baypulse.vercel.app)** · API: [baypulse-api.onrender.com/health](https://baypulse-api.onrender.com/health)
@@ -92,7 +94,9 @@ BayPulse/
 │   │   ├── models/event.ts             # normalized Event type
 │   │   ├── middleware/errorHandler.ts  # AppError + consistent JSON errors
 │   │   ├── utils/cache.ts              # in-memory TTL cache
-│   │   └── server.ts
+│   │   ├── app.ts                      # createApp(): Express app without listen()
+│   │   └── server.ts                   # starts the server
+│   ├── test/                           # Vitest + supertest suites, fixtures, fetch mocks
 │   ├── .env.example
 │   └── package.json
 ├── frontend/
@@ -107,6 +111,7 @@ BayPulse/
 │   ├── vercel.json      # SPA rewrites for client-side routes
 │   ├── .env.example
 │   └── package.json
+├── .github/workflows/ci.yml   # CI: typecheck, test, build on every push/PR
 ├── render.yaml          # Render Blueprint for the backend
 └── README.md
 ```
@@ -180,8 +185,41 @@ npm run dev            # http://localhost:5173
 | | backend | frontend |
 |---|---|---|
 | dev server | `npm run dev` (tsx watch) | `npm run dev` |
+| tests | `npm test` · `npm run test:coverage` | `npm test` |
 | production build | `npm run build` → `dist/` | `npm run build` → `dist/` |
 | run build | `npm start` | `npm run preview` |
+
+## Testing
+
+```bash
+cd backend && npm test        # 90 tests
+cd frontend && npm test       # 16 tests
+```
+
+The backend suite uses **Vitest** and **supertest**. `fetch` is mocked, so tests never call Ticketmaster and need no API key.
+
+| Area | What's covered |
+|---|---|
+| Request validation | Missing or unknown city and category, malformed and impossible dates (`2026-02-30`, Feb 29 in non-leap years), reversed ranges, page/size bounds, Ticketmaster's 1000-result paging limit, non-decimal numbers (`0x10`, `1e1`), keyword length, event id format |
+| Ticketmaster queries | City-name vs. lat/long radius search, keyword/segment/paging pass-through, Bay Area day boundaries converted to UTC |
+| Time zones | PDT and PST days, both 2026 DST transition days, month, year and leap-day boundaries |
+| Normalization | Complete events, missing venues and coordinates, string-typed numbers, placeholder genres (`Undefined`/`Other`), primary classification, image selection |
+| Upstream errors | 404 → 404, 429 → 503, 401/403 → 502, 5xx → 502, network failure → 502, timeout → 504. Failures are not cached. |
+| Security | The API key never appears in error responses; unexpected errors become a generic 500; CORS allows only configured origins; no `X-Powered-By` header |
+| Caching | TTL expiry, oldest-first eviction, overwrites, identical searches served from cache |
+
+Coverage (`npm run test:coverage`): 100% of lines and about 94% of branches in `backend/src`.
+
+The frontend suite tests the date presets (for example, "This weekend" on each day of the week and across month and year boundaries) and the formatting helpers. It runs the same in any time zone.
+
+Writing the tests turned up three bugs, now fixed: impossible dates were silently rolled into the next month, hex and exponent numbers were accepted as page/size, and overwriting a key in a full cache evicted an unrelated entry.
+
+### Continuous integration
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push and pull request:
+
+- **backend**: `npm ci` → typecheck (source and tests) → tests with coverage → build
+- **frontend**: `npm ci` → lint → tests → build
 
 ## Environment variables
 
@@ -241,7 +279,8 @@ In Render, under **baypulse-api → Environment**, set `FRONTEND_URL` to the Ver
 - [ ] Favorites and saved lists (would need auth and a database)
 - [ ] Calendar export and reminders
 - [ ] More event providers
-- [ ] Automated tests (API validation, normalization, UI flows)
+- [x] Automated backend tests and CI
+- [ ] Frontend component and end-to-end tests (e.g. Testing Library, Playwright)
 - [ ] Accessibility audit
 
 ## License
